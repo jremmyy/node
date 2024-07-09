@@ -4,8 +4,9 @@ import { parse as parseURL } from 'url'
 import { sanitize as sanitizeURL } from '../../lib/url.js'
 import { scheduleIterator } from '../schedule.js'
 import { createFetch } from '../../lib/fetch.js'
-import { clearAccountProps, clearTokenProps, writeAccountProps, writeTokenProps } from '../../db/helpers/props.js'
+import { clearAccountProps, clearTokenProps, readAccountProps, writeAccountProps, writeTokenProps } from '../../db/helpers/props.js'
 import { encodeCurrencyCode } from '@xrplkit/amount'
+import { reduceProps } from '../../srv/procedures/token.js'
 
 
 export default async function({ ctx }){
@@ -26,18 +27,22 @@ export default async function({ ctx }){
 			task: 'domains',
 			interval: config.fetchInterval,
 			concurrency: 3,
-			routine: async ({ id, address, domain }) => {
-				if(!domain){
-					let prop = ctx.db.core.accountProps.readOne({
-						where: {
-							account: { id },
-							key: 'domain'
-						}
-					})
-
-					if(prop)
-						domain = prop.value
-				}
+			routine: async ({ id, address }) => {
+				let { domain } = reduceProps({
+					props: readAccountProps({ 
+						ctx, 
+						account: { id } 
+					}),
+					sourceRanking: [
+						'tokenlist',
+						'ledger',
+						'issuer/domain',
+						'xumm',
+						'bithomp',
+						'xrpscan',
+						'twitter'
+					]
+				})
 
 				if(domain){
 					let { protocol, host, pathname } = parseURL(domain)
