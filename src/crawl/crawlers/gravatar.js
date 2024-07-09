@@ -19,25 +19,14 @@ export default async function({ ctx }){
 	while(true){
 		await scheduleIterator({
 			ctx,
+			type: 'issuer',
 			task: 'gravatar',
 			interval: config.fetchInterval,
-			subjectType: 'issuer',
-			iterator: {
-				table: 'tokens',
-				groupBy: ['issuer'],
-				include: {
-					issuer: true
-				}
-			},
-			routine: async token => {
-				if(!token.issuer)
-					return
-
-				let { emailHash } = token.issuer
+			routine: async ({ id, address, emailHash }) => {
 				let icon
 	
 				if(emailHash){
-					log.debug(`checking avatar for ${token.issuer.address}`)
+					log.debug(`checking avatar for ${address}`)
 
 					let { status } = await fetch(`avatar/${emailHash.toLowerCase()}?d=404`)
 	
@@ -47,12 +36,12 @@ export default async function({ ctx }){
 						throw `HTTP ${status}`
 					}
 
-					log.debug(`avatar for ${token.issuer.address}: ${icon}`)
+					log.debug(`avatar for ${address}: ${icon}`)
 				}
 
 				writeAccountProps({
 					ctx,
-					account: token.issuer,
+					account: { id },
 					props: {
 						icon
 					},

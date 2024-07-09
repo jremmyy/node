@@ -125,34 +125,24 @@ async function crawlKyc({ ctx, fetch, interval }){
 	while(true){
 		await scheduleIterator({
 			ctx,
+			type: 'issuer',
 			task: 'xumm.kyc',
 			interval,
-			subjectType: 'issuer',
-			iterator: {
-				table: 'tokens',
-				groupBy: ['issuer'],
-				include: {
-					issuer: true
-				}
-			},
-			routine: async token => {
-				if(!token.issuer)
-					return
+			routine: async ({ id, address }) => {
+				log.debug(`checking KYC for ${address}`)
 
-				log.debug(`checking KYC for ${token.issuer.address}`)
-
-				let { data } = await fetch(`kyc-status/${token.issuer.address}`)
+				let { data } = await fetch(`kyc-status/${address}`)
 
 				writeAccountProps({
 					ctx,
-					account: token.issuer,
+					account: { id },
 					props: {
 						kyc: data.kycApproved
 					},
 					source: 'xumm/kyc'
 				})
 
-				log.debug(`KYC for ${token.issuer.address}: ${data.kycApproved}`)
+				log.debug(`KYC for ${address}: ${data.kycApproved}`)
 	
 				log.accumulate.info({
 					text: [`%kycChecked KYC checked in %time`],
@@ -169,27 +159,15 @@ async function crawlAvatar({ ctx, fetch, interval }){
 	while(true){
 		await scheduleIterator({
 			ctx,
+			type: 'issuer',
 			task: 'xumm.avatar',
 			interval,
-			subjectType: 'issuer',
-			iterator: {
-				table: 'tokens',
-				groupBy: ['issuer'],
-				include: {
-					issuer: true
-				}
-			},
-			routine: async token => {
-				if(!token.issuer)
-					return
-
-				log.debug(`checking avatar for ${token.issuer.address}`)
+			routine: async ({ id, address }) => {
+				log.debug(`checking avatar for ${address}`)
 
 				let { headers } = await fetch(
-					`${token.issuer.address}.png`, 
-					{
-						redirect: 'manual'
-					}
+					`${address}.png`, 
+					{ redirect: 'manual' }
 				)
 
 				let avatar = headers.get('location')
@@ -198,14 +176,14 @@ async function crawlAvatar({ ctx, fetch, interval }){
 	
 				writeAccountProps({
 					ctx,
-					account: token.issuer,
+					account: { id },
 					props: {
 						icon: avatar
 					},
 					source: 'xumm/avatar'
 				})
 
-				log.debug(`avatar for ${token.issuer.address}: ${avatar}`)
+				log.debug(`avatar for ${address}: ${avatar}`)
 				
 				log.accumulate.info({
 					text: [`%avatarsChecked avatars checked in %time`],

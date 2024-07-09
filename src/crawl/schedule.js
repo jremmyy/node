@@ -37,12 +37,8 @@ export async function scheduleGlobal({ ctx, task, interval, routine }){
 	}
 }
 
-export async function scheduleIterator({ ctx, iterator: { table, ...iterator }, subjectType, task, interval, concurrency = 1, routine }){
-	let ids = []
-
-	for(let item of ctx.db.core[table].iter(iterator)){
-		ids.push(item.id)
-	}
+export async function scheduleIterator({ ctx, type, where, include, task, interval, concurrency = 1, routine }){
+	let { table, ids } = collectItemIds({ ctx, type, where })
 
 	log.debug(`${task}:`, ids.length, `items[${table}] to iterate`)
 
@@ -56,12 +52,12 @@ export async function scheduleIterator({ ctx, iterator: { table, ...iterator }, 
 						where: {
 							id
 						},
-						include: iterator.include
+						include
 					})
 
 					let previousOperation = ctx.db.core.operations.readOne({
 						where: {
-							subjectType,
+							subjectType: type,
 							subjectId: item.id,
 							task,
 							time: {
@@ -82,7 +78,7 @@ export async function scheduleIterator({ ctx, iterator: { table, ...iterator }, 
 
 					ctx.db.core.operations.createOne({
 						data: {
-							subjectType,
+							subjectType: type,
 							subjectId: item.id,
 							task,
 							time: unixNow()
@@ -167,4 +163,28 @@ export async function scheduleBatchedIterator({ ctx, iterator: { table, ...itera
 		await flush()
 
 	await wait(1)
+}
+
+function collectItemIds({ ctx, type, where }){
+	if(type === 'issuer'){
+		return {
+			table: 'accounts',
+			ids: ctx.db.core.tokens.readMany({ 
+				select: { issuer: true }, 
+				distinct: ['issuer'],
+				where
+			})
+				.map(row => row.issuer?.id)
+				.filter(Boolean)
+		}
+	}else{
+		return {
+			table: 'tokens',
+			ids: ctx.db.core.tokens.readMany({
+				select: { id: true },
+				where
+			})
+				.map(row => row.id)
+		}
+	}
 }

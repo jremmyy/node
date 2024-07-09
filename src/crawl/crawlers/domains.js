@@ -22,27 +22,15 @@ export default async function({ ctx }){
 	while(true){
 		await scheduleIterator({
 			ctx,
+			type: 'issuer',
 			task: 'domains',
 			interval: config.fetchInterval,
-			subjectType: 'issuer',
 			concurrency: 3,
-			iterator: {
-				table: 'tokens',
-				groupBy: ['issuer'],
-				include: {
-					issuer: true
-				}
-			},
-			routine: async token => {
-				if(!token.issuer)
-					return
-
-				let { address, domain } = token.issuer
-
+			routine: async ({ id, address, domain }) => {
 				if(!domain){
 					let prop = ctx.db.core.accountProps.readOne({
 						where: {
-							account: token.issuer,
+							account: { id },
 							key: 'domain'
 						}
 					})
@@ -151,15 +139,21 @@ export default async function({ ctx }){
 				}else{
 					clearAccountProps({
 						ctx,
-						account: token.issuer,
-						source: `issuer/domain/${token.issuer.address}`
+						account: { id },
+						source: `issuer/domain/${address}`
 					})
 
-					clearTokenProps({
-						ctx,
-						token,
-						source: `issuer/domain/${token.issuer.address}`
-					})
+					for(let token of ctx.db.core.tokens.readMany({ 
+						where: {
+							issuer: { id }
+						}
+					})){
+						clearTokenProps({
+							ctx,
+							token,
+							source: `issuer/domain/${address}`
+						})
+					}
 				}
 			}
 		})
