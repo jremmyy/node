@@ -92,8 +92,7 @@ export async function scheduleIterator({ ctx, type, where, include, task, interv
 }
 
 
-export async function scheduleBatchedIterator({ ctx, iterator: { table, ...iterator }, subjectType, task, interval, batchSize, accumulate, commit }){
-	let ids = []
+export async function scheduleBatchedIterator({ ctx, type, where, include, task, interval, batchSize, accumulate, commit }){
 	let queue = []
 	let flush = async () => {
 		let batch = queue.splice(0, batchSize)
@@ -110,7 +109,7 @@ export async function scheduleBatchedIterator({ ctx, iterator: { table, ...itera
 			for(let item of items){
 				ctx.db.core.operations.createOne({
 					data: {
-						subjectType,
+						subjectType: type,
 						subjectId: item.id,
 						task,
 						time
@@ -120,26 +119,20 @@ export async function scheduleBatchedIterator({ ctx, iterator: { table, ...itera
 		}
 	}
 
-	for(let item of ctx.db.core[table].iter(iterator)){
-		ids.push(item.id)
-	}
+	let { table, ids } = collectItemIds({ ctx, type, where })
+	let now = unixNow()
 
 	log.debug(`${task}:`, ids.length, `items[${table}] to iterate`)
 
-
-	let now = unixNow()
-
 	for(let id of ids){
-		let item = ctx.db.core[table].readOne({
-			where: {
-				id
-			},
-			include: iterator.include
+		let item = ctx.db.core[table].readOne({ 
+			where: { id },
+			include
 		})
 
 		let previousOperation = ctx.db.core.operations.readOne({
 			where: {
-				subjectType,
+				subjectType: type,
 				subjectId: item.id,
 				task,
 				time: {

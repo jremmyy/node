@@ -22,31 +22,28 @@ export default async function({ ctx }){
 	while(true){
 		await scheduleBatchedIterator({
 			ctx,
+			type: 'token',
 			task: 'twitter',
 			interval: config.fetchInterval,
-			subjectType: 'issuer',
 			batchSize: 100,
-			iterator: {
-				table: 'tokens',
-				include: {
-					issuer: true
-				},
-				where: {
-					OR: [
-						{
+			where: {
+				OR: [
+					{
+						props: {
+							key: 'weblinks'
+						}
+					},
+					{
+						issuer: {
 							props: {
 								key: 'weblinks'
 							}
-						},
-						{
-							issuer: {
-								props: {
-									key: 'weblinks'
-								}
-							}
 						}
-					]
-				}
+					}
+				]
+			},
+			include: {
+				issuer: true
 			},
 			accumulate: (tasks, token) => {
 				if(!token.issuer)
