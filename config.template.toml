@@ -114,8 +114,8 @@ source_ranking = [
 	'issuer/domain',	# .toml files published by the token issuer, linked via the "Domain" field
 	'xumm/curated',		# names and icons, manually set by Xumm
 	'xumm/avatar',		# user defined icons from Xumm
+	'gravatar',
 	'bithomp',
 	'xrpscan',
-	'twitter',
-	'gravatar'
+	'twitter'
 ]
