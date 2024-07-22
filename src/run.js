@@ -7,6 +7,7 @@ import startApp from './app/main.js'
 import rebuildCache from './cmd/rebuild-cache.js'
 import backup from './cmd/backup.js'
 import version from './lib/version.js'
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 
 const args = minimist(process.argv.slice(2))
